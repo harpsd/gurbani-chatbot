@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Gurbani Life Guidance</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: Georgia, 'Times New Roman', serif;
+    background: linear-gradient(160deg, #0D1B2E 0%, #111827 50%, #0D1B2E 100%);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: #EDE0C8;
+  }
+  .top-border {
+    width: 100%; height: 3px;
+    background: linear-gradient(90deg, transparent, #E8A020, #C47D10, #E8A020, transparent);
+  }
+  header {
+    width: 100%; max-width: 720px;
+    padding: 28px 24px 20px;
+    text-align: center;
+    border-bottom: 1px solid rgba(232,160,32,0.15);
+  }
+  .ik-onkar {
+    font-size: 52px;
+    color: #E8A020;
+    animation: pulse-glow 3s ease-in-out infinite;
+    line-height: 1;
+    margin-bottom: 12px;
+    user-select: none;
+  }
+  h1 {
+    margin: 0 0 6px;
+    font-size: 22px;
+    font-weight: 700;
+    color: #EDE0C8;
+    letter-spacing: 0.04em;
+  }
+  .subtitle {
+    margin: 0;
+    font-size: 13px;
+    color: rgba(232,160,32,0.7);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .divider {
+    display: flex; align-items: center; gap: 12px;
+    margin-top: 18px;
+  }
+  .divider-line { flex: 1; height: 1px; }
+  .divider-line.left { background: linear-gradient(90deg, transparent, rgba(232,160,32,0.3)); }
+  .divider-line.right { background: linear-gradient(90deg, rgba(232,160,32,0.3), transparent); }
+  .divider-star { color: rgba(232,160,32,0.5); font-size: 14px; }
+
+  main {
+    flex: 1; width: 100%; max-width: 720px;
+    padding: 0 16px;
+    display: flex; flex-direction: column;
+  }
+
+  .welcome-box {
+    background: rgba(232,160,32,0.06);
+    border: 1px solid rgba(232,160,32,0.2);
+    border-radius: 16px;
+    padding: 28px;
+    margin: 32px 0 28px;
+    text-align: center;
+  }
+  .welcome-box p.greeting {
+    color: #E8A020;
+    font-size: 16px;
+    font-weight: bold;
+    line-height: 1.8;
+    margin: 0 0 12px;
+  }
+  .welcome-box p.body-text {
+    color: rgba(237,224,200,0.75);
+    font-size: 14.5px;
+    line-height: 1.8;
+    margin: 0;
+  }
+  .suggestions-label {
+    color: rgba(232,160,32,0.6);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 14px;
+    text-align: center;
+  }
+  .suggestions { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
+  .suggestion-btn {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(232,160,32,0.2);
+    border-radius: 10px;
+    padding: 12px 16px;
+    color: rgba(237,224,200,0.8);
+    font-size: 14px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s;
+    font-family: inherit;
+    line-height: 1.4;
+  }
+  .suggestion-btn:hover {
+    background: rgba(232,160,32,0.1);
+    border-color: rgba(232,160,32,0.5);
+    color: #EDE0C8;
+  }
+  .suggestion-btn .arrow { color: rgba(232,160,32,0.5); margin-right: 10px; }
+
+  #messages { padding: 24px 0 8px; }
+  .msg-row { display: flex; margin-bottom: 20px; animation: fadeIn 0.3s ease-out; }
+  .msg-row.user { justify-content: flex-end; }
+  .msg-row.assistant { justify-content: flex-start; }
+  .avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: linear-gradient(135deg, #E8A020, #C47D10);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; margin-right: 10px; flex-shrink: 0;
+    margin-top: 4px;
+    box-shadow: 0 2px 8px rgba(232,160,32,0.4);
+  }
+  .bubble {
+    max-width: 78%;
+    padding: 14px 18px;
+    line-height: 1.7;
+    font-size: 15px;
+    white-space: pre-wrap;
+  }
+  .bubble.user {
+    background: linear-gradient(135deg, #E8A020, #C47D10);
+    color: #1a0e00;
+    border-radius: 18px 18px 4px 18px;
+    font-weight: 500;
+  }
+  .bubble.assistant {
+    background: rgba(255,255,255,0.06);
+    color: #EDE0C8;
+    border-radius: 18px 18px 18px 4px;
+    border: 1px solid rgba(232,160,32,0.15);
+  }
+  .dots { display: flex; gap: 6px; align-items: center; padding: 4px 0; }
+  .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #E8A020;
+    animation: bounce 1.2s ease-in-out infinite;
+  }
+  .dot:nth-child(2) { animation-delay: 0.2s; }
+  .dot:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes bounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+    30% { transform: translateY(-6px); opacity: 1; }
+  }
+  @keyframes pulse-glow {
+    0%, 100% { text-shadow: 0 0 20px rgba(232,160,32,0.4), 0 0 40px rgba(232,160,32,0.2); }
+    50% { text-shadow: 0 0 30px rgba(232,160,32,0.8), 0 0 60px rgba(232,160,32,0.4), 0 0 80px rgba(232,160,32,0.2); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .input-area {
+    width: 100%; max-width: 720px;
+    padding: 16px;
+    background: rgba(13,27,46,0.8);
+    backdrop-filter: blur(10px);
+    position: sticky; bottom: 0;
+  }
+  .input-area.started { border-top: 1px solid rgba(232,160,32,0.12); }
+  .input-row {
+    display: flex; gap: 10px; align-items: flex-end;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(232,160,32,0.25);
+    border-radius: 14px;
+    padding: 10px 10px 10px 16px;
+    transition: border-color 0.2s;
+  }
+  .input-row.focused { border-color: rgba(232,160,32,0.6); }
+  #textInput {
+    flex: 1; background: none; border: none; outline: none;
+    color: #EDE0C8; font-size: 15px; font-family: inherit;
+    resize: none; line-height: 1.6; max-height: 120px; overflow-y: auto;
+    caret-color: #E8A020;
+  }
+  #sendBtn {
+    width: 38px; height: 38px; border-radius: 10px;
+    border: none; font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s; flex-shrink: 0; cursor: not-allowed;
+    background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.3);
+  }
+  #sendBtn.active {
+    cursor: pointer;
+    background: linear-gradient(135deg, #E8A020, #C47D10);
+    color: #1a0e00;
+  }
+  .footer-note {
+    text-align: center; font-size: 11px;
+    color: rgba(237,224,200,0.25);
+    margin: 10px 0 0; letter-spacing: 0.03em;
+  }
+</style>
+</head>
+<body>
+
+<div class="top-border"></div>
+
+<header>
+  <div class="ik-onkar">ੴ</div>
+  <h1>Gurbani Life Guidance</h1>
+  <p class="subtitle">Wisdom from the Siri Guru Granth Sahib Ji</p>
+  <div class="divider">
+    <div class="divider-line left"></div>
+    <span class="divider-star">✦</span>
+    <div class="divider-line right"></div>
+  </div>
+</header>
+
+<main>
+  <div id="welcomeScreen">
+    <div class="welcome-box">
+      <p class="greeting">Waheguru Ji Ka Khalsa, Waheguru Ji Ki Fateh.</p>
+      <p class="body-text">
+        Share what is on your heart — a struggle, a question, a decision, or anything weighing on your mind.
+        The Guru's wisdom from the Siri Guru Granth Sahib Ji will guide you.
+      </p>
+    </div>
+    <p class="suggestions-label">You might ask about...</p>
+    <div class="suggestions" id="suggestionsList"></div>
+  </div>
+
+  <div id="messages"></div>
+</main>
+
+<div class="input-area" id="inputArea">
+  <div class="input-row" id="inputRow">
+    <textarea id="textInput" placeholder="Share what is on your heart..." rows="1"></textarea>
+    <button id="sendBtn">↑</button>
+  </div>
+  <p class="footer-note">Sat Nam · Waheguru · The Guru's wisdom is for all</p>
+</div>
+
+<script>
+// ====== CONFIGURATION ======
+// Point this at your own backend endpoint (see backend function file).
+// Do NOT put an Anthropic API key directly in this file.
+const BACKEND_URL = "/api/chat";
+
+const suggestions = [
+  "I'm struggling with anger towards someone who wronged me",
+  "How should I deal with envy and comparison at work?",
+  "I feel lost and don't know my purpose in life",
+  "My family is going through a difficult time",
+  "How do I stay humble when I am successful?",
+  "I'm afraid of what the future holds",
+];
+
+let messages = [];
+let started = false;
+let loading = false;
+
+const messagesEl = document.getElementById("messages");
+const welcomeEl = document.getElementById("welcomeScreen");
+const inputEl = document.getElementById("textInput");
+const sendBtn = document.getElementById("sendBtn");
+const inputRow = document.getElementById("inputRow");
+const inputArea = document.getElementById("inputArea");
+const suggestionsList = document.getElementById("suggestionsList");
+
+suggestions.forEach(s => {
+  const btn = document.createElement("button");
+  btn.className = "suggestion-btn";
+  btn.innerHTML = `<span class="arrow">❯</span>${s}`;
+  btn.onclick = () => sendMessage(s);
+  suggestionsList.appendChild(btn);
+});
+
+function renderMessages() {
+  messagesEl.innerHTML = "";
+  messages.forEach(msg => {
+    const row = document.createElement("div");
+    row.className = "msg-row " + msg.role;
+
+    if (msg.role === "assistant") {
+      const avatar = document.createElement("div");
+      avatar.className = "avatar";
+      avatar.textContent = "ੴ";
+      row.appendChild(avatar);
+    }
+
+    const bubble = document.createElement("div");
+    bubble.className = "bubble " + msg.role;
+
+    if (msg.loading) {
+      bubble.innerHTML = `<div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`;
+    } else {
+      bubble.textContent = msg.content;
+    }
+
+    row.appendChild(bubble);
+    messagesEl.appendChild(row);
+  });
+  window.scrollTo(0, document.body.scrollHeight);
+}
+
+function updateSendBtn() {
+  const hasText = inputEl.value.trim().length > 0;
+  sendBtn.classList.toggle("active", hasText && !loading);
+  sendBtn.style.cursor = (hasText && !loading) ? "pointer" : "not-allowed";
+}
+
+inputEl.addEventListener("input", () => {
+  inputEl.style.height = "auto";
+  inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + "px";
+  updateSendBtn();
+});
+
+inputEl.addEventListener("focus", () => inputRow.classList.add("focused"));
+inputEl.addEventListener("blur", () => inputRow.classList.remove("focused"));
+
+inputEl.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+});
+
+sendBtn.addEventListener("click", () => sendMessage());
+
+async function sendMessage(presetText) {
+  const userText = presetText || inputEl.value.trim();
+  if (!userText || loading) return;
+
+  if (!started) {
+    started = true;
+    welcomeEl.style.display = "none";
+    inputArea.classList.add("started");
+  }
+
+  inputEl.value = "";
+  inputEl.style.height = "auto";
+  updateSendBtn();
+
+  messages.push({ role: "user", content: userText });
+  messages.push({ role: "assistant", content: "", loading: true });
+  renderMessages();
+  loading = true;
+  updateSendBtn();
+
+  try {
+    const historyForApi = messages
+      .filter(m => !m.loading)
+      .map(m => ({ role: m.role, content: m.content }));
+
+    const response = await fetch(BACKEND_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages: historyForApi }),
+    });
+
+    if (!response.ok) throw new Error("Request failed");
+
+    const data = await response.json();
+    const reply = data.reply || "Waheguru. Please share what is on your heart, and I will seek the Guru's wisdom for you.";
+
+    messages.pop(); // remove loading bubble
+    messages.push({ role: "assistant", content: reply });
+  } catch (err) {
+    messages.pop();
+    messages.push({
+      role: "assistant",
+      content: "Waheguru. There was a difficulty reaching the Guru's wisdom right now. Please try again in a moment.",
+    });
+  } finally {
+    loading = false;
+    updateSendBtn();
+    renderMessages();
+  }
+}
+
+renderMessages();
+updateSendBtn();
+</script>
+
+</body>
+</html>
