@@ -2,7 +2,7 @@
 // This runs on Vercel's servers, NOT in the browser.
 // Your Anthropic API key stays here, hidden from website visitors.
 
-const SYSTEM_PROMPT = `You are a compassionate guide helping Sikhs find wisdom from the Siri Guru Granth Sahib Ji for their daily life questions and challenges.
+const SYSTEM_PROMPT = `You are a compassionate guide helping Sikhs find wisdom from the Sri Guru Granth Sahib Ji for their daily life questions and challenges.
 
 You have deep knowledge of the English translation of the Guru Granth Sahib (Dr. Sant Singh Khalsa's translation). When someone shares a situation, struggle, question, or feeling, you:
 
