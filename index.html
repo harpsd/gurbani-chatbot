@@ -206,6 +206,76 @@
     color: rgba(237,224,200,0.25);
     margin: 10px 0 0; letter-spacing: 0.03em;
   }
+  .hukamnama-box {
+    width: 100%; max-width: 720px;
+    margin: 0 auto;
+    padding: 0 16px;
+  }
+  .hukamnama-inner {
+    background: linear-gradient(135deg, rgba(232,160,32,0.08), rgba(196,125,16,0.05));
+    border: 1px solid rgba(232,160,32,0.3);
+    border-radius: 14px;
+    padding: 20px 22px;
+    margin: 16px 0 0;
+  }
+  .hukamnama-header {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 14px;
+  }
+  .hukamnama-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #E8A020;
+    font-weight: bold;
+  }
+  .hukamnama-date {
+    font-size: 11px;
+    color: rgba(232,160,32,0.5);
+    margin-left: auto;
+  }
+  .hukamnama-ang {
+    font-size: 12px;
+    color: rgba(232,160,32,0.6);
+    margin-bottom: 10px;
+    letter-spacing: 0.04em;
+  }
+  .hukamnama-gurmukhi {
+    font-size: 16px;
+    color: #E8A020;
+    line-height: 1.9;
+    margin-bottom: 8px;
+  }
+  .hukamnama-transliteration {
+    font-size: 13px;
+    color: rgba(237,224,200,0.6);
+    font-style: italic;
+    line-height: 1.7;
+    margin-bottom: 8px;
+  }
+  .hukamnama-english {
+    font-size: 14px;
+    color: rgba(237,224,200,0.85);
+    line-height: 1.7;
+  }
+  .hukamnama-loading {
+    font-size: 13px;
+    color: rgba(232,160,32,0.5);
+    font-style: italic;
+    text-align: center;
+    padding: 10px 0;
+  }
+  .hukamnama-toggle {
+    background: none;
+    border: none;
+    color: rgba(232,160,32,0.6);
+    font-size: 12px;
+    cursor: pointer;
+    margin-top: 10px;
+    font-family: inherit;
+    text-decoration: underline;
+    padding: 0;
+  }
 </style>
 </head>
 <body>
@@ -222,6 +292,20 @@
     <div class="divider-line right"></div>
   </div>
 </header>
+
+<!-- Hukamnama of the Day -->
+<div class="hukamnama-box">
+  <div class="hukamnama-inner">
+    <div class="hukamnama-header">
+      <span style="font-size:18px;">🕊️</span>
+      <span class="hukamnama-label">Hukamnama of the Day</span>
+      <span class="hukamnama-date" id="hukamDate"></span>
+    </div>
+    <div id="hukamContent">
+      <p class="hukamnama-loading">Loading today's Hukamnama from Sri Darbar Sahib...</p>
+    </div>
+  </div>
+</div>
 
 <main>
   <div id="welcomeScreen">
@@ -261,9 +345,69 @@
 
 <script>
 // ====== CONFIGURATION ======
-// Point this at your own backend endpoint (see backend function file).
-// Do NOT put an Anthropic API key directly in this file.
 const BACKEND_URL = "/api/chat";
+
+// ====== HUKAMNAMA OF THE DAY ======
+async function loadHukamnama() {
+  const dateEl = document.getElementById("hukamDate");
+  const contentEl = document.getElementById("hukamContent");
+
+  // Show today's date
+  const today = new Date();
+  dateEl.textContent = today.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+
+  try {
+    const res = await fetch("https://api.gurbaninow.com/v2/hukamnama/today");
+    if (!res.ok) throw new Error("API error");
+    const data = await res.json();
+
+    const verses = data.hukamnama || [];
+    if (!verses.length) throw new Error("No verses");
+
+    // Build display — show first 2 verses to keep it concise
+    const displayVerses = verses.slice(0, 2);
+    let gurmukhi = "", translit = "", english = "";
+
+    displayVerses.forEach(v => {
+      if (v.punjabi?.gurmukhi?.akhar) gurmukhi += v.punjabi.gurmukhi.akhar + " ";
+      if (v.punjabi?.gurmukhi?.unicode) gurmukhi = gurmukhi; // fallback
+      if (v.transliteration) translit += v.transliteration + " ";
+      if (v.translation?.en?.ssk || v.translation?.en?.bdb) {
+        english += (v.translation.en.ssk || v.translation.en.bdb) + " ";
+      }
+    });
+
+    const ang = data.ang?.ang || "";
+    const raag = data.ang?.shabadInfo?.raagName?.en || "";
+    const source = ang ? `Ang ${ang}${raag ? " · " + raag : ""} · Sri Guru Granth Sahib Ji` : "Sri Guru Granth Sahib Ji";
+
+    let html = `<p class="hukamnama-ang">📖 ${source}</p>`;
+    if (gurmukhi.trim()) html += `<p class="hukamnama-gurmukhi">${gurmukhi.trim()}</p>`;
+    if (translit.trim()) html += `<p class="hukamnama-transliteration">${translit.trim()}</p>`;
+    if (english.trim()) html += `<p class="hukamnama-english">${english.trim()}</p>`;
+    html += `<button class="hukamnama-toggle" onclick="askHukamQuestion()">Ask the Guru about this Hukamnama ›</button>`;
+
+    contentEl.innerHTML = html;
+  } catch (err) {
+    // Fallback — show a beautiful default verse if API is unavailable
+    contentEl.innerHTML = `
+      <p class="hukamnama-ang">📖 Ang 2 · Japji Sahib · Sri Guru Granth Sahib Ji</p>
+      <p class="hukamnama-gurmukhi">ਸੋਚੈ ਸੋਚਿ ਨ ਹੋਵਈ ਜੇ ਸੋਚੀ ਲਖ ਵਾਰ ॥</p>
+      <p class="hukamnama-transliteration">Sochai soch na hovee je sochee lakh vaar.</p>
+      <p class="hukamnama-english">By thinking, He cannot be reduced to thought, even by thinking hundreds of thousands of times.</p>
+      <button class="hukamnama-toggle" onclick="askHukamQuestion()">Ask the Guru about this verse ›</button>
+    `;
+  }
+}
+
+function askHukamQuestion() {
+  const verse = document.querySelector(".hukamnama-english");
+  const text = verse ? `Please help me understand today's Hukamnama and how it applies to my life: "${verse.textContent}"` : "Please help me reflect on today's Hukamnama.";
+  sendMessage(text);
+}
+
+// Load Hukamnama when page opens
+loadHukamnama();
 
 const suggestions = [
   "I'm struggling with anger towards someone who wronged me",
