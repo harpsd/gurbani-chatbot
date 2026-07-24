@@ -357,7 +357,7 @@ async function loadHukamnama() {
   dateEl.textContent = today.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
 
   try {
-    const res = await fetch("https://api.gurbaninow.com/v2/hukamnama/today");
+    const res = await fetch("/api/hukamnama");
     if (!res.ok) throw new Error("API error");
     const data = await res.json();
 
