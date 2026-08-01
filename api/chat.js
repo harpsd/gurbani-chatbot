@@ -18,6 +18,29 @@
 
 const GURBANI_API_BASE = "https://api.gurbaninow.com/v2";
 
+// ── Pinned verses: exact, human-verified references ─────────────────────────
+// Each key maps to a confirmed Ang and a distinctive match phrase. When the model
+// requests a verse by pinned_key, we use THESE values — not the model's memory of
+// the Ang — so core shabads always resolve correctly. Only add an entry here after
+// confirming its Ang against a real /ang/N/G response. "verified: true" means the
+// page JSON was checked directly.
+const PINNED_VERSES = {
+  // ✅ VERIFIED against /ang/262/G (you pasted this page)
+  sukhmani_open: {
+    ang: 262,
+    match: "sukhmanee sukh amrit prabh naam",
+    label: "Sukhmani Sahib — opening (jewel of peace, Naam)",
+    verified: true,
+  },
+  simran_bhau: {
+    ang: 262,
+    match: "prabh kai simaran bhau na biaapai",
+    label: "Remembering God, fear does not touch you (anxiety/fear)",
+    verified: true,
+  },
+  // ⏳ Add more here as each Ang is confirmed via /ang/N/G, then flip verified:true.
+};
+
 const SYSTEM_PROMPT = `You are a compassionate guide helping Sikhs find wisdom from the Sri Guru Granth Sahib Ji and other revered Sikh writings for their daily life questions and challenges.
 
 You draw from two primary sources:
@@ -63,10 +86,20 @@ transliteration, Sant Singh Khalsa English, and the Ang/Raag/author.
 - You MUST call lookup_gurbani to obtain the text of EVERY passage you present.
 - NEVER write Gurmukhi (Punjabi script) from your own memory. Only ever display the
   exact "gurmukhi", "transliteration", and "english" strings the tool returns.
-- To search, pass the most distinctive words of the line you have in mind. You may
-  search with the Gurmukhi first letters of each word, a short Gurmukhi phrase, or
-  key romanized/English words from the line. Pass the "ang" number too when you know
-  it (from the curated list below) — it makes the match far more precise.
+- BEST OPTION — PINNED VERSES: some verses are pre-verified. To use one, call
+  lookup_gurbani with just its "pinned_key" (no ang or query needed) and the correct
+  text is fetched automatically. ALWAYS prefer a pinned_key when the verse you want has
+  one. Available pinned_key values:
+    • sukhmani_open — Sukhmani Sahib opening ("jewel of peace", the Naam) — for anxiety, seeking peace of mind
+    • simran_bhau — "Remembering God, fear does not touch you" — for fear and anxiety
+  (This list will grow. When more keys are added here, prefer them.)
+
+- OTHERWISE: lookup_gurbani needs the "ang" (page) number and a "query" of the most
+  distinctive words of the line — its romanized transliteration (e.g. "chinta ta ki
+  keejai") or key English words of its meaning. The whole Ang is fetched and the
+  matching line returned. The curated list below gives an approximate Ang for each
+  shabad. If you are unsure of the Ang, choose a verse whose Ang you are confident of,
+  or a pinned_key verse, rather than guessing.
 - Look up TWO passages (one tool call each, or both together).
 - Use the "gurmukhi", "transliteration", "english", "ang", "raag", and "writer"
   fields from the tool result to build your citation and the three-line block.
@@ -183,117 +216,137 @@ const TOOLS = [
     input_schema: {
       type: "object",
       properties: {
-        query: {
+        pinned_key: {
           type: "string",
           description:
-            "A distinctive phrase to find the line: Gurmukhi first letters of each word, " +
-            "a short Gurmukhi phrase, or key romanized/English words from the line.",
+            "PREFERRED when available. The key of a pre-verified verse (see the PINNED " +
+            "VERSES list in your instructions). When you pass this, the correct Ang and " +
+            "line are used automatically — you do not need ang or query. Use this for any " +
+            "verse that has a pinned_key.",
         },
         ang: {
           type: "integer",
-          description: "Optional Ang (page) number to narrow the search, when known.",
+          description:
+            "The Ang (page) number of the verse, from the curated list. Required UNLESS " +
+            "pinned_key is given. The whole page is fetched and the matching line selected.",
+        },
+        query: {
+          type: "string",
+          description:
+            "Distinctive words from the specific line on that Ang — either the romanized " +
+            "transliteration (e.g. 'chinta ta ki keejai') or key English words of its " +
+            "meaning. Required UNLESS pinned_key is given.",
         },
       },
-      required: ["query"],
     },
   },
 ];
 
 // ── Execute a lookup_gurbani call against the Gurbani database ──────────────
-async function lookupGurbani({ query, ang }) {
-  if (!query || !String(query).trim()) {
-    return { error: "empty query" };
+// Strategy: fetch the whole Ang (page), which returns clean, reliable data, then
+// pick the line on that page whose text best matches the model's query. This avoids
+// GurbaniNow's flaky /search endpoint, which was the source of the earlier failures.
+async function lookupGurbani({ query, ang, pinned_key }) {
+  // If the model asked for a pinned verse, override with the verified Ang + phrase.
+  if (pinned_key && PINNED_VERSES[pinned_key]) {
+    ang = PINNED_VERSES[pinned_key].ang;
+    query = PINNED_VERSES[pinned_key].match;
   }
-  try {
-    // GurbaniNow search. searchtype: 3 = full-word search (broad). We also pass the
-    // Ang when known to sharpen the match. If matching is poor after you test live,
-    // this URL is the first thing to adjust.
-    let url = `${GURBANI_API_BASE}/search/${encodeURIComponent(String(query).trim())}?searchtype=3&source=G`;
-    if (ang && Number.isFinite(Number(ang))) {
-      url += `&ang=${Number(ang)}`;
-    }
 
+  const q = String(query || "").trim();
+  if (!q) return { error: "empty query" };
+  if (!ang || !Number.isFinite(Number(ang))) {
+    return {
+      error: "no ang provided",
+      note: "Pass the Ang (page) number from the curated list so the verse can be fetched.",
+    };
+  }
+
+  try {
+    // source G = Sri Guru Granth Sahib Ji. This endpoint is reliable (you verified it).
+    const url = `${GURBANI_API_BASE}/ang/${Number(ang)}/G`;
     const resp = await fetch(url, { headers: { Accept: "application/json" } });
     if (!resp.ok) {
-      console.error("Gurbani API HTTP error:", resp.status, await resp.text());
+      console.error("Gurbani API HTTP error:", resp.status);
       return { error: `lookup failed (HTTP ${resp.status})` };
     }
     const data = await resp.json();
 
-    // Find the array of matches regardless of exact wrapper name.
-    const matches =
-      data.shabads || data.results || data.verses || data.lines || [];
-    if (!Array.isArray(matches) || matches.length === 0) {
-      return { error: "no match found", note: "try a different distinctive phrase" };
+    const page = Array.isArray(data.page) ? data.page : [];
+    if (page.length === 0) return { error: "no lines returned for that ang" };
+
+    // Each entry is { line: {...} }. Score each line by word overlap with the query,
+    // comparing against BOTH the transliteration and the English so the model can
+    // search in romanized OR English terms.
+    const wanted = normalize(q);
+    let best = null;
+    let bestScore = 0;
+    for (const entry of page) {
+      const line = entry.line || entry;
+      const hay = normalize(
+        [
+          line?.transliteration?.english?.text,
+          line?.translation?.english?.default,
+        ]
+          .filter(Boolean)
+          .join(" ")
+      );
+      const score = overlap(wanted, hay);
+      if (score > bestScore) {
+        bestScore = score;
+        best = line;
+      }
     }
 
-    const first = matches[0].shabad || matches[0].line || matches[0];
+    // Require a minimal match so we don't return an arbitrary line.
+    if (!best || bestScore < 1) {
+      return {
+        error: "no confident line match on that ang",
+        note: "Try a more distinctive phrase from the line, or a different Ang.",
+      };
+    }
 
-    // Log the raw shape ONCE so you can correct field paths after a live test.
-    console.error("GURBANI_RAW_KEYS:", JSON.stringify(Object.keys(first || {})));
-    console.error("GURBANI_RAW_SAMPLE:", JSON.stringify(first).slice(0, 900));
-
-    return extractVerse(first);
+    return extractVerse(best);
   } catch (err) {
     console.error("Gurbani lookup exception:", err);
     return { error: "lookup exception" };
   }
 }
 
-// ── Defensive field extraction ─────────────────────────────────────────────
-// Tries several likely paths so a small schema difference doesn't break it.
-// Adjust here if the logged GURBANI_RAW_SAMPLE shows different field names.
-function extractVerse(v) {
-  const pick = (...paths) => {
-    for (const p of paths) {
-      const val = p();
-      if (typeof val === "string" && val.trim()) return val.trim();
-    }
-    return "";
-  };
+// Lowercase, strip punctuation/verse markers, collapse whitespace → for matching.
+function normalize(s) {
+  return String(s || "")
+    .toLowerCase()
+    .replace(/\|+\d*\|*/g, " ")   // remove || 1 || style markers
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
-  const gurmukhi = pick(
-    () => v?.verse?.unicode,
-    () => v?.verse?.gurmukhi,
-    () => v?.gurmukhi?.unicode,
-    () => v?.unicode,
-    () => v?.gurmukhi
-  );
+// Count shared words between query and a candidate line.
+function overlap(queryNorm, hayNorm) {
+  if (!queryNorm || !hayNorm) return 0;
+  const hayWords = new Set(hayNorm.split(" "));
+  let n = 0;
+  for (const w of queryNorm.split(" ")) {
+    if (w.length > 1 && hayWords.has(w)) n++;
+  }
+  return n;
+}
 
-  const transliteration = pick(
-    () => v?.transliteration?.english?.text,
-    () => v?.transliteration?.english,
-    () => v?.transliteration,
-    () => v?.larivaar?.transliteration
-  );
-
-  const english = pick(
-    () => v?.translation?.english?.ssk,        // Sant Singh Khalsa — matches your source
-    () => v?.translation?.en?.ssk,
-    () => v?.translation?.english?.default,
-    () => v?.translation?.english,
-    () => v?.translation?.en?.bdb,
-    () => v?.english
-  );
-
-  const ang = v?.pageno || v?.pageNo || v?.ang || v?.page || null;
-
-  const raag = pick(
-    () => v?.raag?.english,
-    () => v?.raag?.unicode,
-    () => v?.raag
-  );
-
-  const writer = pick(
-    () => v?.writer?.english,
-    () => v?.writer?.unicode,
-    () => v?.writer
-  );
+// ── Field extraction (paths confirmed against GurbaniNow's real response) ──
+function extractVerse(line) {
+  const gurmukhi = line?.gurmukhi?.unicode?.trim() || "";
+  const transliteration = line?.transliteration?.english?.text?.trim() || "";
+  // GurbaniNow returns the Sant Singh Khalsa translation as translation.english.default.
+  const english = line?.translation?.english?.default?.trim() || "";
+  const ang = line?.pageno || null;
+  const raag = line?.raag?.english?.trim() || "";
+  const writer = line?.writer?.english?.trim() || "";
 
   if (!gurmukhi && !english) {
-    return { error: "match found but text fields were empty — check field paths" };
+    return { error: "matched a line but its text fields were empty" };
   }
-
   return { gurmukhi, transliteration, english, ang, raag, writer };
 }
 
