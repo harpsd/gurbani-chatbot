@@ -276,6 +276,34 @@
     text-decoration: underline;
     padding: 0;
   }
+
+  /* Assistant message column + share button */
+  .assistant-col { display: flex; flex-direction: column; max-width: 78%; }
+  .assistant-col .bubble { max-width: 100%; }
+  .msg-actions { margin: 6px 0 0 4px; }
+  .share-btn {
+    background: none;
+    border: 1px solid rgba(232,160,32,0.25);
+    color: rgba(232,160,32,0.75);
+    font-family: inherit;
+    font-size: 12px;
+    padding: 5px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+  }
+  .share-btn:hover {
+    background: rgba(232,160,32,0.1);
+    border-color: rgba(232,160,32,0.5);
+    color: #E8A020;
+  }
+  .share-btn.copied {
+    color: #7BD88F;
+    border-color: rgba(123,216,143,0.5);
+  }
 </style>
 </head>
 <body>
@@ -459,7 +487,7 @@ function renderMarkdown(text) {
 
 function renderMessages() {
   messagesEl.innerHTML = "";
-  messages.forEach(msg => {
+  messages.forEach((msg, index) => {
     const row = document.createElement("div");
     row.className = "msg-row " + msg.role;
 
@@ -479,10 +507,85 @@ function renderMessages() {
       bubble.innerHTML = renderMarkdown(msg.content);
     }
 
-    row.appendChild(bubble);
+    if (msg.role === "assistant") {
+      // Wrap the bubble in a column so we can place a Share button beneath it.
+      const col = document.createElement("div");
+      col.className = "assistant-col";
+      col.appendChild(bubble);
+
+      // Only show Share on a real, finished reply (not the loading dots).
+      if (!msg.loading && msg.content) {
+        const actions = document.createElement("div");
+        actions.className = "msg-actions";
+        const shareBtn = document.createElement("button");
+        shareBtn.className = "share-btn";
+        shareBtn.innerHTML = `<span>⤴</span><span class="share-label">Share</span>`;
+        shareBtn.onclick = () => shareMessage(index, shareBtn);
+        actions.appendChild(shareBtn);
+        col.appendChild(actions);
+      }
+      row.appendChild(col);
+    } else {
+      row.appendChild(bubble);
+    }
+
     messagesEl.appendChild(row);
   });
   window.scrollTo(0, document.body.scrollHeight);
+}
+
+// Convert the reply's markdown into clean plain text for sharing.
+function toPlainText(md) {
+  return md
+    .replace(/^#{1,3}\s+/gm, "")        // strip header hashes
+    .replace(/\*\*(.+?)\*\*/g, "$1")    // bold
+    .replace(/\*(.+?)\*/g, "$1")        // italic
+    .replace(/^---$/gm, "—")            // horizontal rules
+    .replace(/\n{3,}/g, "\n\n")         // collapse extra blank lines
+    .trim();
+}
+
+// Share a guidance reply: native share sheet on mobile, clipboard copy elsewhere.
+async function shareMessage(index, btn) {
+  const msg = messages[index];
+  if (!msg || msg.role !== "assistant" || !msg.content) return;
+
+  const body = toPlainText(msg.content);
+  const shareText =
+    body +
+    "\n\n— ੴ Gurbani Life Guidance\n" +
+    window.location.origin;
+
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: "Gurbani Life Guidance", text: shareText });
+    } catch (err) {
+      // User dismissed the share sheet — do nothing.
+    }
+  } else {
+    try {
+      await navigator.clipboard.writeText(shareText);
+    } catch (err) {
+      // Fallback for older browsers.
+      const ta = document.createElement("textarea");
+      ta.value = shareText;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); } catch (e) {}
+      document.body.removeChild(ta);
+    }
+    // Show a brief "Copied!" confirmation on the button.
+    const label = btn.querySelector(".share-label");
+    const original = label ? label.textContent : "";
+    btn.classList.add("copied");
+    if (label) label.textContent = "Copied!";
+    setTimeout(() => {
+      btn.classList.remove("copied");
+      if (label) label.textContent = original || "Share";
+    }, 1800);
+  }
 }
 
 function updateSendBtn() {
