@@ -114,22 +114,22 @@ When someone shares a situation, struggle, question, or feeling, follow this pro
 1. First determine whether you have enough information to provide a meaningful reflection.
 
 2. If the user's situation is unclear or lacks important context, DO NOT immediately look up Gurbani or give advice. Instead, ask ONE thoughtful follow-up question (no tool call yet). Examples:
-- "Can you tell me a little more about what happened?"
-- "What has been the hardest part of this experience?"
-- "What outcome are you hoping for?"
-- "How long have you been feeling this way?"
-- "What emotions are you experiencing most strongly right now?"
+• "Can you tell me a little more about what happened?"
+• "What has been the hardest part of this experience?"
+• "What outcome are you hoping for?"
+• "How long have you been feeling this way?"
+• "What emotions are you experiencing most strongly right now?"
 Only ask ONE. Wait for the user's response before continuing. If they have already given enough detail, skip the question.
 
 3. Once enough information has been gathered:
-- Acknowledge their situation warmly in 2–3 sentences. Make them feel heard before introducing Gurbani.
+• Acknowledge their situation warmly in 2–3 sentences. Make them feel heard before introducing Gurbani.
 
 4. Present exactly TWO passages. For each passage, AFTER looking it up with lookup_gurbani, include in this exact order:
-- Citation reference (Ang, Raag, Mehla — from the tool result)
-- 📜 **Gurmukhi (ਪੰਜਾਬੀ):** the exact Gurmukhi string the tool returned
-- 🔤 **Transliteration:** the exact transliteration the tool returned
-- 📖 **English:** the exact English the tool returned
-- 3–5 sentences explaining how this teaching relates to their situation.
+• Citation reference (Ang, Raag, Mehla — from the tool result)
+• 📜 **Gurmukhi (ਪੰਜਾਬੀ):** the exact Gurmukhi string the tool returned
+• 🔤 **Transliteration:** the exact transliteration the tool returned
+• 📖 **English:** the exact English the tool returned
+• 3–5 sentences explaining how this teaching relates to their situation.
 Always clearly distinguish the scripture itself from your explanation.
 
 5. End with ONE specific Sikh spiritual practice or prayer recommendation, explaining why it may help and where it can be found.
@@ -342,18 +342,82 @@ function extractVerse(line) {
 // no text is sent anywhere for this step, and no text is ever stored.
 // ══════════════════════════════════════════════════════════════════════════
 const TOPIC_KEYWORDS = {
-  protection: ["threat", "enemy", "danger", "protect", "attack", "scared of someone", "harm me"],
-  anxiety: ["anxious", "anxiety", "worry", "worried", "nervous", "panic", "stressed", "overthinking"],
-  grief: ["grief", "loss", "died", "death", "passed away", "mourning", "lost my", "funeral"],
-  financial: ["money", "financial", "debt", "job loss", "poverty", "bills", "broke", "unemployed"],
-  family: ["family", "marriage", "spouse", "husband", "wife", "parents", "in-laws", "divorce", "sibling"],
-  anger: ["angry", "anger", "rage", "furious", "resentment", "hate him", "hate her"],
-  depression: ["depress", "hopeless", "worthless", "empty inside", "numb", "no purpose", "no point"],
-  guidance: ["decision", "guidance", "confused", "what should i do", "which path", "direction in life"],
-  illness: ["sick", "illness", "disease", "diagnosis", "hospital", "cancer", "surgery", "health problem"],
-  spiritual_dryness: ["disconnected from god", "distant from god", "losing faith", "doubt my faith", "spiritually empty"],
-  children: ["my child", "my kids", "my son", "my daughter", "parenting"],
-  workplace: ["boss", "coworker", "workplace", "fired", "unfair at work", "discriminated"],
+  protection: [
+    "threat", "threatened", "enemy", "enemies", "danger", "dangerous", "protect", "protection",
+    "attack", "harm me", "scared of someone", "someone trying to hurt", "being followed",
+    "stalker", "bully", "bullied", "bullying", "unsafe", "feel unsafe", "in danger", "violence",
+    "violent", "evil eye", "nazar", "black magic", "jadu tona", "curse", "cursed", "witchcraft",
+  ],
+  anxiety: [
+    "anxious", "anxiety", "worry", "worried", "worrying", "nervous", "panic", "panic attack",
+    "stressed", "stress", "overthinking", "racing thoughts", "can't stop thinking", "restless",
+    "uneasy", "on edge", "dread", "fear of the future", "overwhelmed", "overwhelming",
+    "can't relax", "tension", "apprehensive", "nervous breakdown", "keep worrying",
+  ],
+  grief: [
+    "grief", "grieving", "loss", "died", "death", "passed away", "passing", "mourning", "mourn",
+    "lost my", "funeral", "bereavement", "miss him", "miss her", "miss them", "gone",
+    "lost someone", "deceased", "cremation", "antim ardas", "losing a loved one",
+    "coping with loss", "someone i love died", "widow", "widower",
+  ],
+  financial: [
+    "money", "financial", "finances", "debt", "job loss", "poverty", "poor", "bills",
+    "broke", "unemployed", "unemployment", "can't pay", "lost my job", "laid off",
+    "bankruptcy", "financial stress", "money problems", "can't afford", "mortgage",
+    "rent", "loan", "loans", "no income", "struggling financially", "in debt",
+  ],
+  family: [
+    "family", "marriage", "married", "spouse", "husband", "wife", "parents", "in-laws",
+    "mother-in-law", "father-in-law", "divorce", "divorcing", "separation", "sibling",
+    "brother", "sister", "mother", "father", "mom", "dad", "family conflict",
+    "family issues", "family problems", "arranged marriage", "family pressure",
+    "generational conflict", "cultural clash", "joint family", "family drama",
+    "estranged", "relationship problems", "breakup", "engagement", "fiancé", "fiancée",
+  ],
+  anger: [
+    "angry", "anger", "rage", "furious", "resentment", "resentful", "hate him", "hate her",
+    "irritated", "irritation", "frustrated", "frustration", "temper", "short temper",
+    "mad at", "seething", "bitter", "grudge", "can't forgive", "holding onto anger",
+    "lash out", "losing my temper",
+  ],
+  depression: [
+    "depress", "depression", "depressed", "hopeless", "hopelessness", "worthless",
+    "empty inside", "numb", "no purpose", "no point", "sad all the time",
+    "don't want to get out of bed", "lost interest", "unmotivated", "low", "down",
+    "dark place", "can't find joy", "meaningless", "tired of everything", "nothing matters",
+    "feel empty", "no motivation",
+  ],
+  guidance: [
+    "decision", "guidance", "confused", "what should i do", "which path", "direction in life",
+    "life choices", "crossroads", "don't know what to do", "big decision", "career choice",
+    "which job", "should i take", "life purpose", "seeking clarity", "need advice",
+    "torn between", "unsure what to do", "which way to go",
+  ],
+  illness: [
+    "sick", "illness", "ill", "disease", "diagnosis", "diagnosed", "hospital",
+    "cancer", "surgery", "health problem", "chronic pain", "chronic illness",
+    "medical condition", "recovering", "treatment", "sick relative", "caregiving",
+    "terminal illness", "health scare", "in the hospital", "unwell",
+  ],
+  spiritual_dryness: [
+    "disconnected from god", "distant from god", "losing faith", "lost my faith",
+    "doubt my faith", "doubting my faith", "spiritually empty", "don't feel connected",
+    "faith is weak", "questioning my faith", "feel far from waheguru", "spiritual struggle",
+    "going through motions", "meditation isn't working", "can't focus on simran",
+    "feel far from god", "spiritually lost", "crisis of faith",
+  ],
+  children: [
+    "my child", "my children", "my kids", "my son", "my daughter", "parenting",
+    "raising kids", "raising my", "teenager", "toddler", "newborn", "child struggling",
+    "kids fighting", "discipline my", "screen time", "child's behavior", "my baby",
+  ],
+  workplace: [
+    "boss", "coworker", "workplace", "fired", "unfair at work", "discriminated",
+    "discrimination", "office politics", "job stress", "toxic workplace",
+    "work environment", "colleague", "workplace conflict", "passed over for promotion",
+    "harassment at work", "layoffs", "laid off", "workplace injustice", "my manager",
+    "hostile work", "work is toxic",
+  ],
 };
 
 function classifyTopic(text) {
