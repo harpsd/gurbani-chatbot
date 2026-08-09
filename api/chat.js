@@ -1,31 +1,30 @@
 // File: /api/chat.js
 // Runs on Vercel's servers, NOT in the browser. Your Anthropic API key stays here.
 //
-// WHAT CHANGED (accuracy rebuild):
-// The model no longer writes Gurmukhi from memory. Instead it is given a tool,
-// `lookup_gurbani`, that fetches the REAL verse text (Gurmukhi + transliteration +
-// Sant Singh Khalsa English + Ang) from a public Gurbani database. The model
-// decides WHICH verses fit the person's situation, looks them up, and writes the
-// warm reflection around the authentic text it receives. If a lookup fails, the
-// model must NOT invent Gurmukhi.
+// USAGE TRACKING (added):
+// This logs ONLY an anonymous count: { date, topic_category } — no message text,
+// no session ID, no IP address, nothing that could identify a person or be strung
+// together into a conversation. It fires once per NEW conversation (detected by
+// the incoming history containing exactly one user message), not once per turn.
+// This keeps the app's "your conversations are completely private" promise intact
+// while still letting you see roughly how many conversations happen and about what.
 //
-// ⚠️ ONE THING TO VERIFY AFTER DEPLOY: I could not call the Gurbani API from where
-// this was written, so the exact JSON field names in extractVerse() are my best
-// guess against GurbaniNow's documented shape. Deploy, send one test question, then
-// open Vercel → your project → Logs. This function logs the raw first result under
-// "GURBANI_RAW_KEYS" and "GURBANI_RAW_SAMPLE". If the Gurmukhi/English come back
-// empty, paste that logged sample back to me and I'll fix the field paths in one edit.
+// Requires an Upstash Redis database attached to this project (Storage tab →
+// Marketplace Database Storage → Upstash → Redis). That automatically sets
+// KV_REST_API_URL / KV_REST_API_TOKEN env vars.
+// Run `npm install @upstash/redis` before deploying.
+
+import { Redis } from "@upstash/redis";
+
+const kv = new Redis({
+  url: process.env.KV_REST_API_URL,
+  token: process.env.KV_REST_API_TOKEN,
+});
 
 const GURBANI_API_BASE = "https://api.gurbaninow.com/v2";
 
 // ── Pinned verses: exact, human-verified references ─────────────────────────
-// Each key maps to a confirmed Ang and a distinctive match phrase. When the model
-// requests a verse by pinned_key, we use THESE values — not the model's memory of
-// the Ang — so core shabads always resolve correctly. Only add an entry here after
-// confirming its Ang against a real /ang/N/G response. "verified: true" means the
-// page JSON was checked directly.
 const PINNED_VERSES = {
-  // ✅ VERIFIED against /ang/262/G (you pasted this page)
   sukhmani_open: {
     ang: 262,
     match: "sukhmanee sukh amrit prabh naam",
@@ -38,7 +37,6 @@ const PINNED_VERSES = {
     label: "Remembering God, fear does not touch you (anxiety/fear)",
     verified: true,
   },
-  // ⏳ Add more here as each Ang is confirmed via /ang/N/G, then flip verified:true.
 };
 
 const SYSTEM_PROMPT = `You are a compassionate guide helping Sikhs find wisdom from the Sri Guru Granth Sahib Ji and other revered Sikh writings for their daily life questions and challenges.
@@ -116,22 +114,22 @@ When someone shares a situation, struggle, question, or feeling, follow this pro
 1. First determine whether you have enough information to provide a meaningful reflection.
 
 2. If the user's situation is unclear or lacks important context, DO NOT immediately look up Gurbani or give advice. Instead, ask ONE thoughtful follow-up question (no tool call yet). Examples:
-• "Can you tell me a little more about what happened?"
-• "What has been the hardest part of this experience?"
-• "What outcome are you hoping for?"
-• "How long have you been feeling this way?"
-• "What emotions are you experiencing most strongly right now?"
+- "Can you tell me a little more about what happened?"
+- "What has been the hardest part of this experience?"
+- "What outcome are you hoping for?"
+- "How long have you been feeling this way?"
+- "What emotions are you experiencing most strongly right now?"
 Only ask ONE. Wait for the user's response before continuing. If they have already given enough detail, skip the question.
 
 3. Once enough information has been gathered:
-• Acknowledge their situation warmly in 2–3 sentences. Make them feel heard before introducing Gurbani.
+- Acknowledge their situation warmly in 2–3 sentences. Make them feel heard before introducing Gurbani.
 
 4. Present exactly TWO passages. For each passage, AFTER looking it up with lookup_gurbani, include in this exact order:
-• Citation reference (Ang, Raag, Mehla — from the tool result)
-• 📜 **Gurmukhi (ਪੰਜਾਬੀ):** the exact Gurmukhi string the tool returned
-• 🔤 **Transliteration:** the exact transliteration the tool returned
-• 📖 **English:** the exact English the tool returned
-• 3–5 sentences explaining how this teaching relates to their situation.
+- Citation reference (Ang, Raag, Mehla — from the tool result)
+- 📜 **Gurmukhi (ਪੰਜਾਬੀ):** the exact Gurmukhi string the tool returned
+- 🔤 **Transliteration:** the exact transliteration the tool returned
+- 📖 **English:** the exact English the tool returned
+- 3–5 sentences explaining how this teaching relates to their situation.
 Always clearly distinguish the scripture itself from your explanation.
 
 5. End with ONE specific Sikh spiritual practice or prayer recommendation, explaining why it may help and where it can be found.
@@ -243,11 +241,7 @@ const TOOLS = [
 ];
 
 // ── Execute a lookup_gurbani call against the Gurbani database ──────────────
-// Strategy: fetch the whole Ang (page), which returns clean, reliable data, then
-// pick the line on that page whose text best matches the model's query. This avoids
-// GurbaniNow's flaky /search endpoint, which was the source of the earlier failures.
 async function lookupGurbani({ query, ang, pinned_key }) {
-  // If the model asked for a pinned verse, override with the verified Ang + phrase.
   if (pinned_key && PINNED_VERSES[pinned_key]) {
     ang = PINNED_VERSES[pinned_key].ang;
     query = PINNED_VERSES[pinned_key].match;
@@ -263,7 +257,6 @@ async function lookupGurbani({ query, ang, pinned_key }) {
   }
 
   try {
-    // source G = Sri Guru Granth Sahib Ji. This endpoint is reliable (you verified it).
     const url = `${GURBANI_API_BASE}/ang/${Number(ang)}/G`;
     const resp = await fetch(url, { headers: { Accept: "application/json" } });
     if (!resp.ok) {
@@ -275,9 +268,6 @@ async function lookupGurbani({ query, ang, pinned_key }) {
     const page = Array.isArray(data.page) ? data.page : [];
     if (page.length === 0) return { error: "no lines returned for that ang" };
 
-    // Each entry is { line: {...} }. Score each line by word overlap with the query,
-    // comparing against BOTH the transliteration and the English so the model can
-    // search in romanized OR English terms.
     const wanted = normalize(q);
     let best = null;
     let bestScore = 0;
@@ -298,7 +288,6 @@ async function lookupGurbani({ query, ang, pinned_key }) {
       }
     }
 
-    // Require a minimal match so we don't return an arbitrary line.
     if (!best || bestScore < 1) {
       return {
         error: "no confident line match on that ang",
@@ -313,17 +302,15 @@ async function lookupGurbani({ query, ang, pinned_key }) {
   }
 }
 
-// Lowercase, strip punctuation/verse markers, collapse whitespace → for matching.
 function normalize(s) {
   return String(s || "")
     .toLowerCase()
-    .replace(/\|+\d*\|*/g, " ")   // remove || 1 || style markers
+    .replace(/\|+\d*\|*/g, " ")
     .replace(/[^\p{L}\p{N}\s]/gu, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
 
-// Count shared words between query and a candidate line.
 function overlap(queryNorm, hayNorm) {
   if (!queryNorm || !hayNorm) return 0;
   const hayWords = new Set(hayNorm.split(" "));
@@ -334,11 +321,9 @@ function overlap(queryNorm, hayNorm) {
   return n;
 }
 
-// ── Field extraction (paths confirmed against GurbaniNow's real response) ──
 function extractVerse(line) {
   const gurmukhi = line?.gurmukhi?.unicode?.trim() || "";
   const transliteration = line?.transliteration?.english?.text?.trim() || "";
-  // GurbaniNow returns the Sant Singh Khalsa translation as translation.english.default.
   const english = line?.translation?.english?.default?.trim() || "";
   const ang = line?.pageno || null;
   const raag = line?.raag?.english?.trim() || "";
@@ -348,6 +333,59 @@ function extractVerse(line) {
     return { error: "matched a line but its text fields were empty" };
   }
   return { gurmukhi, transliteration, english, ang, raag, writer };
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// ANONYMOUS USAGE TRACKING
+// Buckets a message into one of the fixed categories already used elsewhere
+// in this app (see the curated shabad list above). Runs entirely locally —
+// no text is sent anywhere for this step, and no text is ever stored.
+// ══════════════════════════════════════════════════════════════════════════
+const TOPIC_KEYWORDS = {
+  protection: ["threat", "enemy", "danger", "protect", "attack", "scared of someone", "harm me"],
+  anxiety: ["anxious", "anxiety", "worry", "worried", "nervous", "panic", "stressed", "overthinking"],
+  grief: ["grief", "loss", "died", "death", "passed away", "mourning", "lost my", "funeral"],
+  financial: ["money", "financial", "debt", "job loss", "poverty", "bills", "broke", "unemployed"],
+  family: ["family", "marriage", "spouse", "husband", "wife", "parents", "in-laws", "divorce", "sibling"],
+  anger: ["angry", "anger", "rage", "furious", "resentment", "hate him", "hate her"],
+  depression: ["depress", "hopeless", "worthless", "empty inside", "numb", "no purpose", "no point"],
+  guidance: ["decision", "guidance", "confused", "what should i do", "which path", "direction in life"],
+  illness: ["sick", "illness", "disease", "diagnosis", "hospital", "cancer", "surgery", "health problem"],
+  spiritual_dryness: ["disconnected from god", "distant from god", "losing faith", "doubt my faith", "spiritually empty"],
+  children: ["my child", "my kids", "my son", "my daughter", "parenting"],
+  workplace: ["boss", "coworker", "workplace", "fired", "unfair at work", "discriminated"],
+};
+
+function classifyTopic(text) {
+  const norm = String(text || "").toLowerCase();
+  let bestCategory = "other";
+  let bestScore = 0;
+  for (const [category, keywords] of Object.entries(TOPIC_KEYWORDS)) {
+    let score = 0;
+    for (const kw of keywords) {
+      if (norm.includes(kw)) score++;
+    }
+    if (score > bestScore) {
+      bestScore = score;
+      bestCategory = category;
+    }
+  }
+  return bestCategory;
+}
+
+// Increments two counters: a per-day-per-topic count, and a per-day total.
+// Never throws — logging must never break the actual chat response.
+async function logConversationStart(topic) {
+  try {
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD, UTC
+    await kv.incr(`stats:daily:${today}:${topic}`);
+    await kv.incr(`stats:daily:${today}:total`);
+    // Keep a registry of which dates have data, so /api/stats can list them
+    // without needing to scan all keys.
+    await kv.sadd("stats:dates", today);
+  } catch (err) {
+    console.error("Usage logging failed (non-fatal):", err);
+  }
 }
 
 // ── One Anthropic Messages call ────────────────────────────────────────────
@@ -389,6 +427,15 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Invalid messages" });
     }
 
+    // Anonymous logging: only fires on the FIRST message of a new conversation
+    // (i.e. exactly one message so far, and it's from the user). This counts
+    // conversations, not individual turns, and never touches stored text.
+    if (messages.length === 1 && messages[0].role === "user") {
+      const topic = classifyTopic(messages[0].content);
+      // Fire-and-forget: don't let logging add latency to the user's reply.
+      logConversationStart(topic);
+    }
+
     // Cap history length and message size to control cost/abuse.
     let convo = messages.slice(-20).map((m) => ({
       role: m.role === "assistant" ? "assistant" : "user",
@@ -408,9 +455,7 @@ export default async function handler(req, res) {
         .join("");
 
       if (data.stop_reason === "tool_use" && toolUses.length > 0) {
-        // Record the assistant's turn (must include the tool_use blocks)…
         convo.push({ role: "assistant", content });
-        // …then run each lookup and return the results.
         const toolResults = [];
         for (const tu of toolUses) {
           const result = await lookupGurbani(tu.input || {});
@@ -421,10 +466,10 @@ export default async function handler(req, res) {
           });
         }
         convo.push({ role: "user", content: toolResults });
-        continue; // ask the model again with the real text in hand
+        continue;
       }
 
-      finalText = textOut; // no more tools requested → this is the reply
+      finalText = textOut;
       break;
     }
 
