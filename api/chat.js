@@ -1,25 +1,12 @@
 // File: /api/chat.js
 // Runs on Vercel's servers, NOT in the browser. Your Anthropic API key stays here.
 //
-// USAGE TRACKING (added):
-// This logs ONLY an anonymous count: { date, topic_category } — no message text,
-// no session ID, no IP address, nothing that could identify a person or be strung
-// together into a conversation. It fires once per NEW conversation (detected by
-// the incoming history containing exactly one user message), not once per turn.
-// This keeps the app's "your conversations are completely private" promise intact
-// while still letting you see roughly how many conversations happen and about what.
-//
-// Requires an Upstash Redis database attached to this project (Storage tab →
-// Marketplace Database Storage → Upstash → Redis). That automatically sets
-// KV_REST_API_URL / KV_REST_API_TOKEN env vars.
-// Run `npm install @upstash/redis` before deploying.
-
-import { Redis } from "@upstash/redis";
-
-const kv = new Redis({
-  url: process.env.KV_REST_API_URL,
-  token: process.env.KV_REST_API_TOKEN,
-});
+// The model no longer writes Gurmukhi from memory. Instead it is given a tool,
+// `lookup_gurbani`, that fetches the REAL verse text (Gurmukhi + transliteration +
+// Sant Singh Khalsa English + Ang) from a public Gurbani database. The model
+// decides WHICH verses fit the person's situation, looks them up, and writes the
+// warm reflection around the authentic text it receives. If a lookup fails, the
+// model must NOT invent Gurmukhi.
 
 const GURBANI_API_BASE = "https://api.gurbaninow.com/v2";
 
@@ -335,123 +322,6 @@ function extractVerse(line) {
   return { gurmukhi, transliteration, english, ang, raag, writer };
 }
 
-// ══════════════════════════════════════════════════════════════════════════
-// ANONYMOUS USAGE TRACKING
-// Buckets a message into one of the fixed categories already used elsewhere
-// in this app (see the curated shabad list above). Runs entirely locally —
-// no text is sent anywhere for this step, and no text is ever stored.
-// ══════════════════════════════════════════════════════════════════════════
-const TOPIC_KEYWORDS = {
-  protection: [
-    "threat", "threatened", "enemy", "enemies", "danger", "dangerous", "protect", "protection",
-    "attack", "harm me", "scared of someone", "someone trying to hurt", "being followed",
-    "stalker", "bully", "bullied", "bullying", "unsafe", "feel unsafe", "in danger", "violence",
-    "violent", "evil eye", "nazar", "black magic", "jadu tona", "curse", "cursed", "witchcraft",
-  ],
-  anxiety: [
-    "anxious", "anxiety", "worry", "worried", "worrying", "nervous", "panic", "panic attack",
-    "stressed", "stress", "overthinking", "racing thoughts", "can't stop thinking", "restless",
-    "uneasy", "on edge", "dread", "fear of the future", "overwhelmed", "overwhelming",
-    "can't relax", "tension", "apprehensive", "nervous breakdown", "keep worrying",
-  ],
-  grief: [
-    "grief", "grieving", "loss", "died", "death", "passed away", "passing", "mourning", "mourn",
-    "lost my", "funeral", "bereavement", "miss him", "miss her", "miss them", "gone",
-    "lost someone", "deceased", "cremation", "antim ardas", "losing a loved one",
-    "coping with loss", "someone i love died", "widow", "widower",
-  ],
-  financial: [
-    "money", "financial", "finances", "debt", "job loss", "poverty", "poor", "bills",
-    "broke", "unemployed", "unemployment", "can't pay", "lost my job", "laid off",
-    "bankruptcy", "financial stress", "money problems", "can't afford", "mortgage",
-    "rent", "loan", "loans", "no income", "struggling financially", "in debt",
-  ],
-  family: [
-    "family", "marriage", "married", "spouse", "husband", "wife", "parents", "in-laws",
-    "mother-in-law", "father-in-law", "divorce", "divorcing", "separation", "sibling",
-    "brother", "sister", "mother", "father", "mom", "dad", "family conflict",
-    "family issues", "family problems", "arranged marriage", "family pressure",
-    "generational conflict", "cultural clash", "joint family", "family drama",
-    "estranged", "relationship problems", "breakup", "engagement", "fiancé", "fiancée",
-  ],
-  anger: [
-    "angry", "anger", "rage", "furious", "resentment", "resentful", "hate him", "hate her",
-    "irritated", "irritation", "frustrated", "frustration", "temper", "short temper",
-    "mad at", "seething", "bitter", "grudge", "can't forgive", "holding onto anger",
-    "lash out", "losing my temper",
-  ],
-  depression: [
-    "depress", "depression", "depressed", "hopeless", "hopelessness", "worthless",
-    "empty inside", "numb", "no purpose", "no point", "sad all the time",
-    "don't want to get out of bed", "lost interest", "unmotivated", "low", "down",
-    "dark place", "can't find joy", "meaningless", "tired of everything", "nothing matters",
-    "feel empty", "no motivation",
-  ],
-  guidance: [
-    "decision", "guidance", "confused", "what should i do", "which path", "direction in life",
-    "life choices", "crossroads", "don't know what to do", "big decision", "career choice",
-    "which job", "should i take", "life purpose", "seeking clarity", "need advice",
-    "torn between", "unsure what to do", "which way to go",
-  ],
-  illness: [
-    "sick", "illness", "ill", "disease", "diagnosis", "diagnosed", "hospital",
-    "cancer", "surgery", "health problem", "chronic pain", "chronic illness",
-    "medical condition", "recovering", "treatment", "sick relative", "caregiving",
-    "terminal illness", "health scare", "in the hospital", "unwell",
-  ],
-  spiritual_dryness: [
-    "disconnected from god", "distant from god", "losing faith", "lost my faith",
-    "doubt my faith", "doubting my faith", "spiritually empty", "don't feel connected",
-    "faith is weak", "questioning my faith", "feel far from waheguru", "spiritual struggle",
-    "going through motions", "meditation isn't working", "can't focus on simran",
-    "feel far from god", "spiritually lost", "crisis of faith",
-  ],
-  children: [
-    "my child", "my children", "my kids", "my son", "my daughter", "parenting",
-    "raising kids", "raising my", "teenager", "toddler", "newborn", "child struggling",
-    "kids fighting", "discipline my", "screen time", "child's behavior", "my baby",
-  ],
-  workplace: [
-    "boss", "coworker", "workplace", "fired", "unfair at work", "discriminated",
-    "discrimination", "office politics", "job stress", "toxic workplace",
-    "work environment", "colleague", "workplace conflict", "passed over for promotion",
-    "harassment at work", "layoffs", "laid off", "workplace injustice", "my manager",
-    "hostile work", "work is toxic",
-  ],
-};
-
-function classifyTopic(text) {
-  const norm = String(text || "").toLowerCase();
-  let bestCategory = "other";
-  let bestScore = 0;
-  for (const [category, keywords] of Object.entries(TOPIC_KEYWORDS)) {
-    let score = 0;
-    for (const kw of keywords) {
-      if (norm.includes(kw)) score++;
-    }
-    if (score > bestScore) {
-      bestScore = score;
-      bestCategory = category;
-    }
-  }
-  return bestCategory;
-}
-
-// Increments two counters: a per-day-per-topic count, and a per-day total.
-// Never throws — logging must never break the actual chat response.
-async function logConversationStart(topic) {
-  try {
-    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD, UTC
-    await kv.incr(`stats:daily:${today}:${topic}`);
-    await kv.incr(`stats:daily:${today}:total`);
-    // Keep a registry of which dates have data, so /api/stats can list them
-    // without needing to scan all keys.
-    await kv.sadd("stats:dates", today);
-  } catch (err) {
-    console.error("Usage logging failed (non-fatal):", err);
-  }
-}
-
 // ── One Anthropic Messages call ────────────────────────────────────────────
 async function callAnthropic(messages) {
   const resp = await fetch("https://api.anthropic.com/v1/messages", {
@@ -489,15 +359,6 @@ export default async function handler(req, res) {
     const { messages } = req.body;
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return res.status(400).json({ error: "Invalid messages" });
-    }
-
-    // Anonymous logging: only fires on the FIRST message of a new conversation
-    // (i.e. exactly one message so far, and it's from the user). This counts
-    // conversations, not individual turns, and never touches stored text.
-    if (messages.length === 1 && messages[0].role === "user") {
-      const topic = classifyTopic(messages[0].content);
-      // Fire-and-forget: don't let logging add latency to the user's reply.
-      logConversationStart(topic);
     }
 
     // Cap history length and message size to control cost/abuse.
