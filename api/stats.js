@@ -43,6 +43,7 @@ export default async function handler(req, res) {
   try {
     const numDays = Math.min(Math.max(parseInt(days) || 14, 1), 90);
 
+    // Build the list of dates to check, most recent first.
     const dates = [];
     for (let i = 0; i < numDays; i++) {
       const d = new Date();
@@ -57,7 +58,7 @@ export default async function handler(req, res) {
 
     for (const date of dates) {
       const total = (await kv.get(`stats:daily:${date}:total`)) || 0;
-      if (total === 0) continue;
+      if (total === 0) continue; // skip days with no traffic, keep response small
 
       const dayBreakdown = {};
       for (const category of CATEGORIES) {
@@ -68,10 +69,17 @@ export default async function handler(req, res) {
         }
       }
 
-      byDate[date] = { total, byCategory: dayBreakdown };
+      // Unique visitors that day: size of the Redis SET for that date.
+      const uniqueVisitorsThatDay = await kv.scard(`stats:daily:${date}:unique_visitors`);
+
+      byDate[date] = { total, uniqueVisitors: uniqueVisitorsThatDay || 0, byCategory: dayBreakdown };
       grandTotal += total;
     }
 
+    // Total distinct visitors ever seen, across all time (not just this window).
+    const uniqueVisitorsAllTime = await kv.scard("stats:unique_visitors:all_time");
+
+    // Drop zero-count categories from the summary for readability.
     const nonZeroCategoryTotals = Object.fromEntries(
       Object.entries(categoryTotals).filter(([, v]) => v > 0)
     );
@@ -79,12 +87,15 @@ export default async function handler(req, res) {
     return res.status(200).json({
       range: `last ${numDays} days`,
       total_conversations: grandTotal,
+      unique_visitors_all_time: uniqueVisitorsAllTime || 0,
       by_category: nonZeroCategoryTotals,
       by_date: byDate,
       note:
-        "Counts are anonymous — no message text, session IDs, or identifiers are " +
-        "ever stored. Each count is one new conversation, classified by simple " +
-        "keyword matching on the opening message only.",
+        "Counts are anonymous — no message text or identifying info is ever " +
+        "stored. 'total_conversations' counts new chat sessions. " +
+        "'unique_visitors' counts distinct browsers via a random, non-identifying " +
+        "ID stored locally in each visitor's browser — clearing browser data or " +
+        "using a different device will be counted as a new visitor.",
     });
   } catch (err) {
     console.error("Stats error:", err);
