@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Gurbani Life Guidance</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: Georgia, 'Times New Roman', serif;
+    background: linear-gradient(160deg, #0D1B2E 0%, #111827 50%, #0D1B2E 100%);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: #EDE0C8;
+  }
+  .top-border {
+    width: 100%; height: 3px;
+    background: linear-gradient(90deg, transparent, #E8A020, #C47D10, #E8A020, transparent);
+  }
+  header {
+    width: 100%; max-width: 720px;
+    padding: 28px 24px 20px;
+    text-align: center;
+    border-bottom: 1px solid rgba(232,160,32,0.15);
+  }
+  .ik-onkar {
+    font-size: 52px;
+    color: #E8A020;
+    animation: pulse-glow 3s ease-in-out infinite;
+    line-height: 1;
+    margin-bottom: 12px;
+    user-select: none;
+  }
+  h1 {
+    margin: 0 0 6px;
+    font-size: 22px;
+    font-weight: 700;
+    color: #EDE0C8;
+    letter-spacing: 0.04em;
+  }
+  .subtitle {
+    margin: 0;
+    font-size: 13px;
+    color: rgba(232,160,32,0.7);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .divider {
+    display: flex; align-items: center; gap: 12px;
+    margin-top: 18px;
+  }
+  .divider-line { flex: 1; height: 1px; }
+  .divider-line.left { background: linear-gradient(90deg, transparent, rgba(232,160,32,0.3)); }
+  .divider-line.right { background: linear-gradient(90deg, rgba(232,160,32,0.3), transparent); }
+  .divider-star { color: rgba(232,160,32,0.5); font-size: 14px; }
+
+  main {
+    flex: 1; width: 100%; max-width: 720px;
+    padding: 0 16px;
+    display: flex; flex-direction: column;
+  }
+
+  .welcome-box {
+    background: rgba(232,160,32,0.06);
+    border: 1px solid rgba(232,160,32,0.2);
+    border-radius: 16px;
+    padding: 28px;
+    margin: 32px 0 28px;
+    text-align: center;
+  }
+  .welcome-box p.greeting {
+    color: #E8A020;
+    font-size: 16px;
+    font-weight: bold;
+    line-height: 1.8;
+    margin: 0 0 12px;
+  }
+  .welcome-box p.body-text {
+    color: rgba(237,224,200,0.75);
+    font-size: 14.5px;
+    line-height: 1.8;
+    margin: 0;
+  }
+  .suggestions-label {
+    color: rgba(232,160,32,0.6);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 14px;
+    text-align: center;
+  }
+  .suggestions { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
+  .suggestion-btn {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(232,160,32,0.2);
+    border-radius: 10px;
+    padding: 12px 16px;
+    color: rgba(237,224,200,0.8);
+    font-size: 14px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s;
+    font-family: inherit;
+    line-height: 1.4;
+  }
+  .suggestion-btn:hover {
+    background: rgba(232,160,32,0.1);
+    border-color: rgba(232,160,32,0.5);
+    color: #EDE0C8;
+  }
+  .suggestion-btn .arrow { color: rgba(232,160,32,0.5); margin-right: 10px; }
+
+  #messages { padding: 24px 0 8px; }
+  .msg-row { display: flex; margin-bottom: 20px; animation: fadeIn 0.3s ease-out; }
+  .msg-row.user { justify-content: flex-end; }
+  .msg-row.assistant { justify-content: flex-start; }
+  .avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: linear-gradient(135deg, #E8A020, #C47D10);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; margin-right: 10px; flex-shrink: 0;
+    margin-top: 4px;
+    box-shadow: 0 2px 8px rgba(232,160,32,0.4);
+  }
+  .bubble {
+    max-width: 78%;
+    padding: 14px 18px;
+    line-height: 1.7;
+    font-size: 15px;
+    white-space: pre-wrap;
+  }
+  .bubble.user {
+    background: linear-gradient(135deg, #E8A020, #C47D10);
+    color: #1a0e00;
+    border-radius: 18px 18px 4px 18px;
+    font-weight: 500;
+  }
+  .bubble.assistant {
+    background: rgba(255,255,255,0.06);
+    color: #EDE0C8;
+    border-radius: 18px 18px 18px 4px;
+    border: 1px solid rgba(232,160,32,0.15);
+  }
+  .dots { display: flex; gap: 6px; align-items: center; padding: 4px 0; }
+  .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #E8A020;
+    animation: bounce 1.2s ease-in-out infinite;
+  }
+  .dot:nth-child(2) { animation-delay: 0.2s; }
+  .dot:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes bounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+    30% { transform: translateY(-6px); opacity: 1; }
+  }
+  @keyframes pulse-glow {
+    0%, 100% { text-shadow: 0 0 20px rgba(232,160,32,0.4), 0 0 40px rgba(232,160,32,0.2); }
+    50% { text-shadow: 0 0 30px rgba(232,160,32,0.8), 0 0 60px rgba(232,160,32,0.4), 0 0 80px rgba(232,160,32,0.2); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .input-area {
+    width: 100%; max-width: 720px;
+    padding: 16px;
+    background: rgba(13,27,46,0.8);
+    backdrop-filter: blur(10px);
+    position: sticky; bottom: 0;
+  }
+  .input-area.started { border-top: 1px solid rgba(232,160,32,0.12); }
+  .input-row {
+    display: flex; gap: 10px; align-items: flex-end;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(232,160,32,0.25);
+    border-radius: 14px;
+    padding: 10px 10px 10px 16px;
+    transition: border-color 0.2s;
+  }
+  .input-row.focused { border-color: rgba(232,160,32,0.6); }
+  #textInput {
+    flex: 1; background: none; border: none; outline: none;
+    color: #EDE0C8; font-size: 15px; font-family: inherit;
+    resize: none; line-height: 1.6; max-height: 120px; overflow-y: auto;
+    caret-color: #E8A020;
+  }
+  #sendBtn {
+    width: 38px; height: 38px; border-radius: 10px;
+    border: none; font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s; flex-shrink: 0; cursor: not-allowed;
+    background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.3);
+  }
+  #sendBtn.active {
+    cursor: pointer;
+    background: linear-gradient(135deg, #E8A020, #C47D10);
+    color: #1a0e00;
+  }
+  .footer-note {
+    text-align: center; font-size: 11px;
+    color: rgba(237,224,200,0.25);
+    margin: 10px 0 0; letter-spacing: 0.03em;
+  }
+  .hukamnama-box {
+    width: 100%; max-width: 720px;
+    margin: 0 auto;
+    padding: 0 16px;
+  }
+  .hukamnama-inner {
+    background: linear-gradient(135deg, rgba(232,160,32,0.08), rgba(196,125,16,0.05));
+    border: 1px solid rgba(232,160,32,0.3);
+    border-radius: 14px;
+    padding: 20px 22px;
+    margin: 16px 0 0;
+  }
+  .hukamnama-header {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 14px;
+  }
+  .hukamnama-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #E8A020;
+    font-weight: bold;
+  }
+  .hukamnama-date {
+    font-size: 11px;
+    color: rgba(232,160,32,0.5);
+    margin-left: auto;
+  }
+  .hukamnama-ang {
+    font-size: 12px;
+    color: rgba(232,160,32,0.6);
+    margin-bottom: 10px;
+    letter-spacing: 0.04em;
+  }
+  .hukamnama-gurmukhi {
+    font-size: 16px;
+    color: #E8A020;
+    line-height: 1.9;
+    margin-bottom: 8px;
+  }
+  .hukamnama-transliteration {
+    font-size: 13px;
+    color: rgba(237,224,200,0.6);
+    font-style: italic;
+    line-height: 1.7;
+    margin-bottom: 8px;
+  }
+  .hukamnama-english {
+    font-size: 14px;
+    color: rgba(237,224,200,0.85);
+    line-height: 1.7;
+  }
+  .hukamnama-loading {
+    font-size: 13px;
+    color: rgba(232,160,32,0.5);
+    font-style: italic;
+    text-align: center;
+    padding: 10px 0;
+  }
+  .hukamnama-toggle {
+    background: none;
+    border: none;
+    color: rgba(232,160,32,0.6);
+    font-size: 12px;
+    cursor: pointer;
+    margin-top: 10px;
+    font-family: inherit;
+    text-decoration: underline;
+    padding: 0;
+  }
+
+  /* Assistant message column + share button */
+  .assistant-col { display: flex; flex-direction: column; max-width: 78%; }
+  .assistant-col .bubble { max-width: 100%; }
+  .msg-actions { margin: 6px 0 0 4px; }
+  .share-btn {
+    background: none;
+    border: 1px solid rgba(232,160,32,0.25);
+    color: rgba(232,160,32,0.75);
+    font-family: inherit;
+    font-size: 12px;
+    padding: 5px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+  }
+  .share-btn:hover {
+    background: rgba(232,160,32,0.1);
+    border-color: rgba(232,160,32,0.5);
+    color: #E8A020;
+  }
+  .share-btn.copied {
+    color: #7BD88F;
+    border-color: rgba(123,216,143,0.5);
+  }
+</style>
+</head>
+<body>
+
+<div class="top-border"></div>
+
+<header>
+  <div class="ik-onkar">ੴ</div>
+  <h1>Gurbani Life Guidance</h1>
+  <p class="subtitle">Wisdom from the Sri Guru Granth Sahib Ji</p>
+  <div class="divider">
+    <div class="divider-line left"></div>
+    <span class="divider-star">✦</span>
+    <div class="divider-line right"></div>
+  </div>
+</header>
+
+<!-- Hukamnama of the Day -->
+<div class="hukamnama-box">
+  <div class="hukamnama-inner">
+    <div class="hukamnama-header">
+      <span style="font-size:18px;">🕊️</span>
+      <span class="hukamnama-label">Hukamnama of the Day</span>
+      <span class="hukamnama-date" id="hukamDate"></span>
+    </div>
+    <div id="hukamContent">
+      <p class="hukamnama-loading">Loading today's Hukamnama from Sri Darbar Sahib...</p>
+    </div>
+  </div>
+</div>
+
+<main>
+  <div id="welcomeScreen">
+    <div class="welcome-box">
+      <p class="greeting">Waheguru Ji Ka Khalsa, Waheguru Ji Ki Fateh.</p>
+      <p class="body-text">
+        Our mission is to make the wisdom of Gurbani more accessible and applicable to every generation, 
+        helping people live with greater compassion, humility, purpose, and connection to the teachings 
+        of the Guru Granth Sahib.
+      </p>
+      <div style="height:1px;background:rgba(232,160,32,0.2);margin:16px 0;"></div>
+      <p class="body-text">
+        Share what is on your heart — a struggle, a question, a decision, or anything weighing on your mind.
+        The Guru's wisdom from the Sri Guru Granth Sahib Ji will guide you.
+      </p>
+      <div style="height:1px;background:rgba(232,160,32,0.2);margin:16px 0;"></div>
+      <p style="color:rgba(232,160,32,0.7);font-size:13px;line-height:1.7;margin:0;">
+        🔒 <strong>Your privacy is sacred.</strong> Your conversations are completely private. 
+        No one can see, read, or access what you share here. 
+        Speak openly, as you would with the Guru.
+      </p>
+    </div>
+    <p class="suggestions-label">You might ask about...</p>
+    <div class="suggestions" id="suggestionsList"></div>
+  </div>
+
+  <div id="messages"></div>
+</main>
+
+<div class="input-area" id="inputArea">
+  <div class="input-row" id="inputRow">
+    <textarea id="textInput" placeholder="Share what is on your heart..." rows="1"></textarea>
+    <button id="sendBtn">↑</button>
+  </div>
+  <p class="footer-note">Sat Nam · Waheguru · The Guru's wisdom is for all</p>
+  <p class="footer-note" style="margin-top:6px;">This is a seva project for the Sangat. Share your feedback or suggestions: <a href="mailto:guidancegurbani@gmail.com" style="color:rgba(232,160,32,0.5);text-decoration:none;">guidancegurbani@gmail.com</a></p>
+</div>
+
+<script>
+// ====== CONFIGURATION ======
+const BACKEND_URL = "/api/chat";
+
+// ====== ANONYMOUS VISITOR ID ======
+// A random string stored in this browser only, used purely to count unique
+// visitors (not conversations). It is NOT a name, email, or anything that
+// identifies who someone is — just a random ticket number. If someone clears
+// their browser storage or uses a different device, they'll be counted again
+// as a "new" visitor; that's an accepted limitation of staying anonymous.
+function getVisitorId() {
+  const key = "gurbani_visitor_id";
+  let id = localStorage.getItem(key);
+  if (!id) {
+    id = "v_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    localStorage.setItem(key, id);
+  }
+  return id;
+}
+const VISITOR_ID = getVisitorId();
+
+// ====== HUKAMNAMA OF THE DAY ======
+async function loadHukamnama() {
+  const dateEl = document.getElementById("hukamDate");
+  const contentEl = document.getElementById("hukamContent");
+
+  // Show today's date
+  const today = new Date();
+  dateEl.textContent = today.toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+
+  try {
+    const res = await fetch("/api/hukamnama");
+    if (!res.ok) throw new Error("API error");
+    const data = await res.json();
+
+    const verses = data.hukamnama || [];
+    if (!verses.length) throw new Error("No verses");
+
+    // Build display — show first 2 verses to keep it concise
+    const displayVerses = verses.slice(0, 2);
+    let gurmukhi = "", translit = "", english = "";
+
+    displayVerses.forEach(v => {
+      if (v.punjabi?.gurmukhi?.akhar) gurmukhi += v.punjabi.gurmukhi.akhar + " ";
+      if (v.punjabi?.gurmukhi?.unicode) gurmukhi = gurmukhi; // fallback
+      if (v.transliteration) translit += v.transliteration + " ";
+      if (v.translation?.en?.ssk || v.translation?.en?.bdb) {
+        english += (v.translation.en.ssk || v.translation.en.bdb) + " ";
+      }
+    });
+
+    const ang = data.ang?.ang || "";
+    const raag = data.ang?.shabadInfo?.raagName?.en || "";
+    const source = ang ? `Ang ${ang}${raag ? " · " + raag : ""} · Sri Guru Granth Sahib Ji` : "Sri Guru Granth Sahib Ji";
+
+    let html = `<p class="hukamnama-ang">📖 ${source}</p>`;
+    if (gurmukhi.trim()) html += `<p class="hukamnama-gurmukhi">${gurmukhi.trim()}</p>`;
+    if (translit.trim()) html += `<p class="hukamnama-transliteration">${translit.trim()}</p>`;
+    if (english.trim()) html += `<p class="hukamnama-english">${english.trim()}</p>`;
+    html += `<button class="hukamnama-toggle" onclick="askHukamQuestion()">Ask the Guru about this Hukamnama ›</button>`;
+
+    contentEl.innerHTML = html;
+  } catch (err) {
+    // Fallback — show a beautiful default verse if API is unavailable
+    contentEl.innerHTML = `
+      <p class="hukamnama-ang">📖 Ang 2 · Japji Sahib · Sri Guru Granth Sahib Ji</p>
+      <p class="hukamnama-gurmukhi">ਸੋਚੈ ਸੋਚਿ ਨ ਹੋਵਈ ਜੇ ਸੋਚੀ ਲਖ ਵਾਰ ॥</p>
+      <p class="hukamnama-transliteration">Sochai soch na hovee je sochee lakh vaar.</p>
+      <p class="hukamnama-english">By thinking, He cannot be reduced to thought, even by thinking hundreds of thousands of times.</p>
+      <button class="hukamnama-toggle" onclick="askHukamQuestion()">Ask the Guru about this verse ›</button>
+    `;
+  }
+}
+
+function askHukamQuestion() {
+  const verse = document.querySelector(".hukamnama-english");
+  const text = verse ? `Please help me understand today's Hukamnama and how it applies to my life: "${verse.textContent}"` : "Please help me reflect on today's Hukamnama.";
+  sendMessage(text);
+}
+
+// Load Hukamnama when page opens
+loadHukamnama();
+
+const suggestions = [
+  "I'm struggling with anger towards someone who wronged me",
+  "How should I deal with envy and comparison at work?",
+  "I feel lost and don't know my purpose in life",
+  "My family is going through a difficult time",
+  "How do I stay humble when I am successful?",
+  "I'm afraid of what the future holds",
+];
+
+let messages = [];
+let started = false;
+let loading = false;
+
+const messagesEl = document.getElementById("messages");
+const welcomeEl = document.getElementById("welcomeScreen");
+const inputEl = document.getElementById("textInput");
+const sendBtn = document.getElementById("sendBtn");
+const inputRow = document.getElementById("inputRow");
+const inputArea = document.getElementById("inputArea");
+const suggestionsList = document.getElementById("suggestionsList");
+
+suggestions.forEach(s => {
+  const btn = document.createElement("button");
+  btn.className = "suggestion-btn";
+  btn.innerHTML = `<span class="arrow">❯</span>${s}`;
+  btn.onclick = () => sendMessage(s);
+  suggestionsList.appendChild(btn);
+});
+
+function renderMarkdown(text) {
+  return text
+    // Escape HTML first
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    // Headers ## and ###
+    .replace(/^### (.+)$/gm, '<h3 style="color:#E8A020;margin:12px 0 4px;font-size:15px;">$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2 style="color:#E8A020;margin:14px 0 6px;font-size:16px;">$1</h2>')
+    .replace(/^# (.+)$/gm, '<h2 style="color:#E8A020;margin:14px 0 6px;font-size:17px;">$1</h2>')
+    // Bold **text**
+    .replace(/\*\*(.+?)\*\*/g, '<strong style="color:#E8A020;">$1</strong>')
+    // Italic *text*
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    // Horizontal rule ---
+    .replace(/^---$/gm, '<hr style="border:none;border-top:1px solid rgba(232,160,32,0.2);margin:12px 0;">')
+    // Line breaks
+    .replace(/\n/g, '<br>');
+}
+
+function renderMessages() {
+  messagesEl.innerHTML = "";
+  messages.forEach((msg, index) => {
+    const row = document.createElement("div");
+    row.className = "msg-row " + msg.role;
+
+    if (msg.role === "assistant") {
+      const avatar = document.createElement("div");
+      avatar.className = "avatar";
+      avatar.textContent = "ੴ";
+      row.appendChild(avatar);
+    }
+
+    const bubble = document.createElement("div");
+    bubble.className = "bubble " + msg.role;
+
+    if (msg.loading) {
+      bubble.innerHTML = `<div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`;
+    } else {
+      bubble.innerHTML = renderMarkdown(msg.content);
+    }
+
+    if (msg.role === "assistant") {
+      // Wrap the bubble in a column so we can place a Share button beneath it.
+      const col = document.createElement("div");
+      col.className = "assistant-col";
+      col.appendChild(bubble);
+
+      // Only show Share on a real, finished reply (not the loading dots).
+      if (!msg.loading && msg.content) {
+        const actions = document.createElement("div");
+        actions.className = "msg-actions";
+        const shareBtn = document.createElement("button");
+        shareBtn.className = "share-btn";
+        shareBtn.innerHTML = `<span>⤴</span><span class="share-label">Share</span>`;
+        shareBtn.onclick = () => shareMessage(index, shareBtn);
+        actions.appendChild(shareBtn);
+        col.appendChild(actions);
+      }
+      row.appendChild(col);
+    } else {
+      row.appendChild(bubble);
+    }
+
+    messagesEl.appendChild(row);
+  });
+  window.scrollTo(0, document.body.scrollHeight);
+}
+
+// Convert the reply's markdown into clean plain text for sharing.
+function toPlainText(md) {
+  return md
+    .replace(/^#{1,3}\s+/gm, "")        // strip header hashes
+    .replace(/\*\*(.+?)\*\*/g, "$1")    // bold
+    .replace(/\*(.+?)\*/g, "$1")        // italic
+    .replace(/^---$/gm, "—")            // horizontal rules
+    .replace(/\n{3,}/g, "\n\n")         // collapse extra blank lines
+    .trim();
+}
+
+// Share a guidance reply: native share sheet on mobile, clipboard copy elsewhere.
+async function shareMessage(index, btn) {
+  const msg = messages[index];
+  if (!msg || msg.role !== "assistant" || !msg.content) return;
+
+  const body = toPlainText(msg.content);
+  const shareText =
+    body +
+    "\n\n— ੴ Gurbani Life Guidance\n" +
+    window.location.origin;
+
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: "Gurbani Life Guidance", text: shareText });
+    } catch (err) {
+      // User dismissed the share sheet — do nothing.
+    }
+  } else {
+    try {
+      await navigator.clipboard.writeText(shareText);
+    } catch (err) {
+      // Fallback for older browsers.
+      const ta = document.createElement("textarea");
+      ta.value = shareText;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); } catch (e) {}
+      document.body.removeChild(ta);
+    }
+    // Show a brief "Copied!" confirmation on the button.
+    const label = btn.querySelector(".share-label");
+    const original = label ? label.textContent : "";
+    btn.classList.add("copied");
+    if (label) label.textContent = "Copied!";
+    setTimeout(() => {
+      btn.classList.remove("copied");
+      if (label) label.textContent = original || "Share";
+    }, 1800);
+  }
+}
+
+function updateSendBtn() {
+  const hasText = inputEl.value.trim().length > 0;
+  sendBtn.classList.toggle("active", hasText && !loading);
+  sendBtn.style.cursor = (hasText && !loading) ? "pointer" : "not-allowed";
+}
+
+inputEl.addEventListener("input", () => {
+  inputEl.style.height = "auto";
+  inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + "px";
+  updateSendBtn();
+});
+
+inputEl.addEventListener("focus", () => inputRow.classList.add("focused"));
+inputEl.addEventListener("blur", () => inputRow.classList.remove("focused"));
+
+inputEl.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+});
+
+sendBtn.addEventListener("click", () => sendMessage());
+
+async function sendMessage(presetText) {
+  const userText = presetText || inputEl.value.trim();
+  if (!userText || loading) return;
+
+  if (!started) {
+    started = true;
+    welcomeEl.style.display = "none";
+    inputArea.classList.add("started");
+  }
+
+  inputEl.value = "";
+  inputEl.style.height = "auto";
+  updateSendBtn();
+
+  messages.push({ role: "user", content: userText });
+  messages.push({ role: "assistant", content: "", loading: true });
+  renderMessages();
+  loading = true;
+  updateSendBtn();
+
+  try {
+    const historyForApi = messages
+      .filter(m => !m.loading)
+      .map(m => ({ role: m.role, content: m.content }));
+
+    const response = await fetch(BACKEND_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages: historyForApi, visitorId: VISITOR_ID }),
+    });
+
+    if (!response.ok) throw new Error("Request failed");
+
+    const data = await response.json();
+    const reply = data.reply || "Waheguru. Please share what is on your heart, and I will seek the Guru's wisdom for you.";
+
+    messages.pop(); // remove loading bubble
+    messages.push({ role: "assistant", content: reply });
+  } catch (err) {
+    messages.pop();
+    messages.push({
+      role: "assistant",
+      content: "Waheguru. There was a difficulty reaching the Guru's wisdom right now. Please try again in a moment.",
+    });
+  } finally {
+    loading = false;
+    updateSendBtn();
+    renderMessages();
+  }
+}
+
+renderMessages();
+updateSendBtn();
+</script>
+
+</body>
+</html>
