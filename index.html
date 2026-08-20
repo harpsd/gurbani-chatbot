@@ -376,6 +376,23 @@
 // ====== CONFIGURATION ======
 const BACKEND_URL = "/api/chat";
 
+// ====== ANONYMOUS VISITOR ID ======
+// A random string stored in this browser only, used purely to count unique
+// visitors (not conversations). It is NOT a name, email, or anything that
+// identifies who someone is — just a random ticket number. If someone clears
+// their browser storage or uses a different device, they'll be counted again
+// as a "new" visitor; that's an accepted limitation of staying anonymous.
+function getVisitorId() {
+  const key = "gurbani_visitor_id";
+  let id = localStorage.getItem(key);
+  if (!id) {
+    id = "v_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    localStorage.setItem(key, id);
+  }
+  return id;
+}
+const VISITOR_ID = getVisitorId();
+
 // ====== HUKAMNAMA OF THE DAY ======
 async function loadHukamnama() {
   const dateEl = document.getElementById("hukamDate");
@@ -640,7 +657,7 @@ async function sendMessage(presetText) {
     const response = await fetch(BACKEND_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messages: historyForApi }),
+      body: JSON.stringify({ messages: historyForApi, visitorId: VISITOR_ID }),
     });
 
     if (!response.ok) throw new Error("Request failed");
