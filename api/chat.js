@@ -439,7 +439,7 @@ function classifyTopic(text) {
 
 // Increments two counters: a per-day-per-topic count, and a per-day total.
 // Never throws — logging must never break the actual chat response.
-async function logConversationStart(topic) {
+async function logConversationStart(topic, visitorId) {
   try {
     const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD, UTC
     await kv.incr(`stats:daily:${today}:${topic}`);
@@ -447,6 +447,17 @@ async function logConversationStart(topic) {
     // Keep a registry of which dates have data, so /api/stats can list them
     // without needing to scan all keys.
     await kv.sadd("stats:dates", today);
+
+    // Unique-visitor tracking: visitorId is a random string generated and
+    // stored in the browser (see index.html) — never a name, email, or
+    // anything identifying. Adding it to a Redis SET automatically dedupes,
+    // so the set's size (via SCARD) is the count of distinct visitors.
+    // Tracked both per-day and all-time (lifetime) so you can see daily
+    // active visitors as well as total unique visitors ever.
+    if (visitorId && typeof visitorId === "string" && visitorId.length <= 100) {
+      await kv.sadd(`stats:daily:${today}:unique_visitors`, visitorId);
+      await kv.sadd("stats:unique_visitors:all_time", visitorId);
+    }
   } catch (err) {
     console.error("Usage logging failed (non-fatal):", err);
   }
@@ -486,7 +497,7 @@ export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   try {
-    const { messages } = req.body;
+    const { messages, visitorId } = req.body;
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return res.status(400).json({ error: "Invalid messages" });
     }
@@ -494,10 +505,13 @@ export default async function handler(req, res) {
     // Anonymous logging: only fires on the FIRST message of a new conversation
     // (i.e. exactly one message so far, and it's from the user). This counts
     // conversations, not individual turns, and never touches stored text.
+    // visitorId is a random, non-identifying string from the browser (see
+    // index.html) used only to count unique visitors — never a name, email,
+    // or anything that could identify who someone is.
     if (messages.length === 1 && messages[0].role === "user") {
       const topic = classifyTopic(messages[0].content);
       // Fire-and-forget: don't let logging add latency to the user's reply.
-      logConversationStart(topic);
+      logConversationStart(topic, visitorId);
     }
 
     // Cap history length and message size to control cost/abuse.
